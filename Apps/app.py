@@ -13,9 +13,11 @@ CORS(app)
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
-# Load model
+# Load model dengan path absolut relatif terhadap file ini
 try:
-    model = tf.keras.models.load_model(os.path.join('food101_mobilenetv2_final.keras'))
+    base_dir = os.path.dirname(os.path.abspath(__file__))  # Lokasi file app.py
+    model_path = os.path.join(base_dir, 'food101_mobilenetv2_final.keras')
+    model = tf.keras.models.load_model(model_path)
 except Exception as e:
     raise RuntimeError(f"Failed to load model: {e}")
 
@@ -56,7 +58,9 @@ def predict_image(image_path):
 def get_nutrition_data(food_snake_case):
     food_title_case = food_snake_case.replace('_', ' ').title()
     try:
-        with open(os.path.join('FoodNutrition.json'), 'r') as f:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        json_path = os.path.join(base_dir, 'FoodNutrition.json')
+        with open(json_path, 'r') as f:
             nutrition_data = json.load(f)
     except FileNotFoundError:
         return None
