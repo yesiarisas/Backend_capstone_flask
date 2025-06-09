@@ -7,6 +7,9 @@ import os
 import json
 import requests
 
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
 app = Flask(__name__)
 CORS(app)
 
@@ -36,9 +39,10 @@ try:
     if not os.path.exists(model_path):
         download_model_from_gdrive(MODEL_FILE_ID, model_path)
 
-    model = tf.keras.models.load_model(model_path)
+    model = tf.keras.models.load_model(model_path, compile=False)
 except Exception as e:
     raise RuntimeError(f"Failed to load model: {e}")
+
 
 class_names = [
     'apple_pie', 'baby_back_ribs', 'baklava', 'beef_carpaccio', 'beef_tartare', 'beet_salad', 'beignets',
