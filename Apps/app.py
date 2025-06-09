@@ -1,19 +1,25 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, request, jsonify
+from werkzeug.utils import secure_filename
+from flask_cors import CORS
 import tensorflow as tf
 import numpy as np
 import os
 import json
-from werkzeug.utils import secure_filename
-from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
+
+# Konfigurasi folder untuk upload
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
-# Load Model
-model = tf.keras.models.load_model('food101_mobilenetv2_final.keras')
+# Load model
+try:
+    model = tf.keras.models.load_model(os.path.join('food101_mobilenetv2_final.keras'))
+except Exception as e:
+    raise RuntimeError(f"Failed to load model: {e}")
 
-# Class Names
+# Daftar kelas makanan
 class_names = [
     'apple_pie', 'baby_back_ribs', 'baklava', 'beef_carpaccio', 'beef_tartare', 'beet_salad', 'beignets',
     'bibimbap', 'bread_pudding', 'breakfast_burrito', 'caesar_salad', 'cannoli', 'caprese_salad', 'carrot_cake',
@@ -29,10 +35,14 @@ class_names = [
     'steak', 'strawberry_shortcake', 'sushi', 'tacos', 'takoyaki', 'tiramisu', 'tuna_tartare', 'waffles'
 ]
 
+# Fungsi untuk cek ekstensi file
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# Fungsi prediksi makanan
 def predict_image(image_path):
     img = tf.keras.preprocessing.image.load_img(image_path, target_size=(224, 224))
-    img_array = tf.keras.preprocessing.image.img_to_array(img)
-    img_array = img_array / 255.0
+    img_array = tf.keras.preprocessing.image.img_to_array(img) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
 
     predictions = model.predict(img_array)
@@ -42,11 +52,14 @@ def predict_image(image_path):
 
     return predicted_class, confidence
 
+# Ambil data nutrisi dari file JSON
 def get_nutrition_data(food_snake_case):
     food_title_case = food_snake_case.replace('_', ' ').title()
-
-    with open('foodnutrition.json', 'r') as f:
-        nutrition_data = json.load(f)
+    try:
+        with open(os.path.join('FoodNutrition.json'), 'r') as f:
+            nutrition_data = json.load(f)
+    except FileNotFoundError:
+        return None
 
     for item in nutrition_data:
         if item['food_name'].lower() == food_title_case.lower():
@@ -54,13 +67,18 @@ def get_nutrition_data(food_snake_case):
 
     return None
 
+# Endpoint prediksi
 @app.route('/predict', methods=['POST'])
-def upload_image():
+def predict_food_image():
     if 'image' not in request.files:
         return jsonify({'error': 'No file uploaded!'}), 400
+
     file = request.files['image']
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
+
+    if not allowed_file(file.filename):
+        return jsonify({'error': 'Invalid file type'}), 400
 
     filename = secure_filename(file.filename)
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -74,7 +92,7 @@ def upload_image():
     nutrition = get_nutrition_data(label_snake)
 
     if nutrition:
-        response_data = {
+        return jsonify({
             'food_name': label_title,
             'confidence': confidence,
             'image_url': f'/static/uploads/{filename}',
@@ -89,8 +107,7 @@ def upload_image():
                 'iron': nutrition.get('iron'),
                 'sugar': nutrition.get('sugar')
             }
-        }
-        return jsonify(response_data), 200
+        }), 200
     else:
         return jsonify({
             'food_name': label_title,
@@ -99,5 +116,6 @@ def upload_image():
             'nutrition_info': 'Not found'
         }), 200
 
+# Jalankan server
 if __name__ == '__main__':
     app.run(debug=True, port=8000)
