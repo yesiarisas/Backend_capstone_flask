@@ -5,6 +5,7 @@ import tensorflow as tf
 import numpy as np
 import os
 import json
+import requests
 
 app = Flask(__name__)
 CORS(app)
@@ -12,9 +13,29 @@ CORS(app)
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
+# Google Drive File ID dari file .keras kamu
+MODEL_FILE_ID = "1lhBAXGdYDAB3LIwc6-WiyjKnq61ghOCT"
+MODEL_FILENAME = "food101_mobilenetv2_final.keras"
+
+def download_model_from_gdrive(file_id, destination):
+    print("Downloading model from Google Drive...")
+    url = f"https://drive.google.com/uc?export=download&id={file_id}"
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        with open(destination, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+    print("Model downloaded successfully.")
+
+# Load model (download dulu kalau belum ada)
 try:
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    model_path = os.path.join(base_dir, 'food101_mobilenetv2_final.keras')
+    model_path = os.path.join(base_dir, MODEL_FILENAME)
+
+    if not os.path.exists(model_path):
+        download_model_from_gdrive(MODEL_FILE_ID, model_path)
+
     model = tf.keras.models.load_model(model_path)
 except Exception as e:
     raise RuntimeError(f"Failed to load model: {e}")
