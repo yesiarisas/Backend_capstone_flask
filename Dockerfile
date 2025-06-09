@@ -1,17 +1,18 @@
-# Base image
+# Gunakan image Python
 FROM python:3.10-slim
 
-# Set work directory
+# Set workdir
 WORKDIR /app
 
-# Copy all files
+# Copy semua file
 COPY . .
 
 # Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
 
-# Buat folder upload jika belum ada
-RUN mkdir -p static/uploads
+# Expose port
+EXPOSE 8000
 
-# Jalankan Flask
-CMD ["python", "Apps/app.py"]
+# Jalankan aplikasi dengan gunicorn
+CMD ["gunicorn", "-b", "0.0.0.0:8000", "app:app"]
