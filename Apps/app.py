@@ -9,19 +9,16 @@ import json
 app = Flask(__name__)
 CORS(app)
 
-# Konfigurasi folder untuk upload
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
-# Load model dengan path absolut relatif terhadap file ini
 try:
-    base_dir = os.path.dirname(os.path.abspath(__file__))  # Lokasi file app.py
+    base_dir = os.path.dirname(os.path.abspath(__file__))
     model_path = os.path.join(base_dir, 'food101_mobilenetv2_final.keras')
     model = tf.keras.models.load_model(model_path)
 except Exception as e:
     raise RuntimeError(f"Failed to load model: {e}")
 
-# Daftar kelas makanan
 class_names = [
     'apple_pie', 'baby_back_ribs', 'baklava', 'beef_carpaccio', 'beef_tartare', 'beet_salad', 'beignets',
     'bibimbap', 'bread_pudding', 'breakfast_burrito', 'caesar_salad', 'cannoli', 'caprese_salad', 'carrot_cake',
@@ -37,11 +34,9 @@ class_names = [
     'steak', 'strawberry_shortcake', 'sushi', 'tacos', 'takoyaki', 'tiramisu', 'tuna_tartare', 'waffles'
 ]
 
-# Fungsi untuk cek ekstensi file
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Fungsi prediksi makanan
 def predict_image(image_path):
     img = tf.keras.preprocessing.image.load_img(image_path, target_size=(224, 224))
     img_array = tf.keras.preprocessing.image.img_to_array(img) / 255.0
@@ -54,7 +49,6 @@ def predict_image(image_path):
 
     return predicted_class, confidence
 
-# Ambil data nutrisi dari file JSON
 def get_nutrition_data(food_snake_case):
     food_title_case = food_snake_case.replace('_', ' ').title()
     try:
@@ -71,7 +65,6 @@ def get_nutrition_data(food_snake_case):
 
     return None
 
-# Endpoint prediksi
 @app.route('/predict', methods=['POST'])
 def predict_food_image():
     if 'image' not in request.files:
@@ -120,6 +113,5 @@ def predict_food_image():
             'nutrition_info': 'Not found'
         }), 200
 
-# Jalankan server
 if __name__ == '__main__':
     app.run(debug=True, port=8000)
