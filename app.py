@@ -8,7 +8,7 @@ import json
 import requests
 
 # Paksa penggunaan CPU saja (disable GPU)
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 # Inisialisasi Flask
 app = Flask(__name__)
