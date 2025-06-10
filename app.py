@@ -86,7 +86,7 @@ def get_nutrition_data(food_snake_case):
     food_title_case = food_snake_case.replace('_', ' ').title()
     try:
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        json_path = os.path.join(base_dir, 'FoodNutrition.json')
+        json_path = os.path.join(base_dir, './Apps/FoodNutrition.json')
         with open(json_path, 'r') as f:
             nutrition_data = json.load(f)
     except FileNotFoundError:
