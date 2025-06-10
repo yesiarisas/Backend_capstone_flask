@@ -7,19 +7,22 @@ import os
 import json
 import requests
 
-
+# Paksa penggunaan CPU saja (disable GPU)
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
+# Inisialisasi Flask
 app = Flask(__name__)
 CORS(app)
 
+# Konfigurasi folder upload
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
-# Google Drive File ID dari file .keras kamu
+# ID file Google Drive dan nama file model
 MODEL_FILE_ID = "1lhBAXGdYDAB3LIwc6-WiyjKnq61ghOCT"
 MODEL_FILENAME = "food101_mobilenetv2_final.keras"
 
+# Download model dari Google Drive jika belum ada
 def download_model_from_gdrive(file_id, destination):
     print("Downloading model from Google Drive...")
     url = f"https://drive.google.com/uc?export=download&id={file_id}"
@@ -31,7 +34,7 @@ def download_model_from_gdrive(file_id, destination):
                     f.write(chunk)
     print("Model downloaded successfully.")
 
-# Load model (download dulu kalau belum ada)
+# Load model
 try:
     base_dir = os.path.dirname(os.path.abspath(__file__))
     model_path = os.path.join(base_dir, MODEL_FILENAME)
@@ -43,7 +46,7 @@ try:
 except Exception as e:
     raise RuntimeError(f"Failed to load model: {e}")
 
-
+# Daftar nama kelas
 class_names = [
     'apple_pie', 'baby_back_ribs', 'baklava', 'beef_carpaccio', 'beef_tartare', 'beet_salad', 'beignets',
     'bibimbap', 'bread_pudding', 'breakfast_burrito', 'caesar_salad', 'cannoli', 'caprese_salad', 'carrot_cake',
@@ -59,21 +62,26 @@ class_names = [
     'steak', 'strawberry_shortcake', 'sushi', 'tacos', 'takoyaki', 'tiramisu', 'tuna_tartare', 'waffles'
 ]
 
+# Validasi ekstensi file
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# Prediksi gambar
 def predict_image(image_path):
     img = tf.keras.preprocessing.image.load_img(image_path, target_size=(224, 224))
     img_array = tf.keras.preprocessing.image.img_to_array(img) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
 
-    predictions = model.predict(img_array)
+    with tf.device('/CPU:0'):  # Paksa prediksi di CPU
+        predictions = model.predict(img_array)
+
     predicted_index = np.argmax(predictions)
     predicted_class = class_names[predicted_index]
     confidence = float(predictions[0][predicted_index])
 
     return predicted_class, confidence
 
+# Ambil data nutrisi
 def get_nutrition_data(food_snake_case):
     food_title_case = food_snake_case.replace('_', ' ').title()
     try:
@@ -90,6 +98,7 @@ def get_nutrition_data(food_snake_case):
 
     return None
 
+# Endpoint prediksi
 @app.route('/predict', methods=['POST'])
 def predict_food_image():
     if 'image' not in request.files:
@@ -138,5 +147,6 @@ def predict_food_image():
             'nutrition_info': 'Not found'
         }), 200
 
+# Jalankan server
 if __name__ == '__main__':
     app.run(debug=True, port=8000)
